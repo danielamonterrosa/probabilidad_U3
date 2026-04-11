@@ -4,6 +4,7 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy.stats import shapiro, skew
+from scipy.stats import norm
 
 # Configuración de la página
 st.set_page_config(page_title="Data Analyzer Pro", layout="wide")
@@ -142,3 +143,86 @@ if df is not None:
                 st.warning("No es Normal")
     else:
         st.warning("El archivo no contiene columnas numéricas.")
+        
+# --- MÓDULO DE PRUEBA DE HIPÓTESIS Z ---
+if df is not None:
+    st.divider()
+    st.header("🧪 Prueba de Hipótesis Z (Media)")
+    
+    cols_numericas = df.select_dtypes(include=[np.number]).columns.tolist()
+    
+    if len(cols_numericas) > 0:
+        with st.expander("Configuración de la Prueba Z", expanded=True):
+            col_z = st.selectbox("Variable para la prueba:", cols_numericas, key="z_var")
+            
+            # Limpieza de datos inmediata
+            datos_z = df[col_z].dropna()
+            n = len(datos_z)
+            media_muestral = datos_z.mean()
+
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                mu_0 = st.number_input("Media Hipotética (H0)", value=0.0)
+                sigma = st.number_input("Desviación Estándar Poblacional (σ)", value=1.0, min_value=0.01)
+            with c2:
+                tipo_prueba = st.selectbox("Tipo de prueba:", ["Bilateral (≠)", "Cola Izquierda (<)", "Cola Derecha (>)"])
+                alfa = st.slider("Nivel de significancia (α)", 0.01, 0.10, 0.05)
+            with c3:
+                st.metric("Media Muestral (x̄)", f"{media_muestral:.4f}")
+                st.metric("Tamaño de muestra (n)", n)
+
+        # VALIDACIONES
+        if n < 30:
+            st.warning("⚠️ El tamaño de la muestra es menor a 30. Los resultados de la prueba Z podrían no ser confiables (considere usar Prueba T).")
+        
+        # CÁLCULOS ESTADÍSTICOS
+        # Estadístico Z = (x̄ - μ0) / (σ / √n)
+        z_stat = (media_muestral - mu_0) / (sigma / np.sqrt(n))
+        
+        if tipo_prueba == "Bilateral (≠)":
+            p_valor = 2 * (1 - norm.cdf(abs(z_stat)))
+            z_critico_inf = norm.ppf(alfa/2)
+            z_critico_sup = norm.ppf(1 - alfa/2)
+        elif tipo_prueba == "Cola Izquierda (<)":
+            p_valor = norm.cdf(z_stat)
+            z_critico_inf = norm.ppf(alfa)
+            z_critico_sup = None
+        else: # Cola Derecha
+            p_valor = 1 - norm.cdf(z_stat)
+            z_critico_inf = None
+            z_critico_sup = norm.ppf(1 - alfa)
+
+        # DECISIÓN
+        rechazar = p_valor < alfa
+
+        # MOSTRAR RESULTADOS
+        res1, res2 = st.columns(2)
+        with res1:
+            st.subheader("Resultados")
+            st.write(f"**Estadístico Z:** {z_stat:.4f}")
+            st.write(f"**P-Value:** {p_valor:.4f}")
+            if rechazar:
+                st.error("Decisión: Rechazar H0")
+            else:
+                st.success("Decisión: No rechazar H0")
+
+        with res2:
+            # Gráfico de la Normal y Región Crítica
+            x = np.linspace(-4, 4, 1000)
+            y = norm.pdf(x, 0, 1)
+            fig, ax = plt.subplots(figsize=(6, 4))
+            ax.plot(x, y, color='black')
+            
+            # Sombreado de zonas de rechazo
+            if tipo_prueba == "Bilateral (≠)":
+                ax.fill_between(x, y, where=(x <= z_critico_inf) | (x >= z_critico_sup), color='red', alpha=0.5, label="Región de Rechazo")
+            elif tipo_prueba == "Cola Izquierda (<)":
+                ax.fill_between(x, y, where=(x <= z_critico_inf), color='red', alpha=0.5, label="Región de Rechazo")
+            else:
+                ax.fill_between(x, y, where=(x >= z_critico_sup), color='red', alpha=0.5, label="Región de Rechazo")
+            
+            # Línea del estadístico calculado
+            ax.axvline(z_stat, color='blue', linestyle='--', label=f'Z calculado: {z_stat:.2f}')
+            ax.legend(fontsize='small')
+            ax.set_title("Distribución Normal Estándar")
+            st.pyplot(fig)
