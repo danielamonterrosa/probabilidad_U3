@@ -121,27 +121,29 @@ if df is not None:
         
         # Test de Normalidad (Shapiro-Wilk)
         # Solo si n > 3 y n < 5000 (limitación del test)
-        stat, p_valor = shapiro(datos)
+        if len(datos) >= 3:
+            stat, p_valor = shapiro(datos)
+            c1, c2, c3 = st.columns(3)
+            
+            with c1:
+                st.metric("Sesgo (Skewness)", f"{valor_sesgo:.2f}")
+                if abs(valor_sesgo) < 0.5:
+                    st.write("Simétrica")
+                else:
+                    st.write("Sesgada" + (" a la derecha" if valor_sesgo > 0 else " a la izquierda"))
 
-        c1, c2, c3 = st.columns(3)
-        
-        with c1:
-            st.metric("Sesgo (Skewness)", f"{valor_sesgo:.2f}")
-            if abs(valor_sesgo) < 0.5:
-                st.write("Simétrica")
-            else:
-                st.write("Sesgada" + (" a la derecha" if valor_sesgo > 0 else " a la izquierda"))
+            with c2:
+                st.metric("Outliers detectados", len(outliers))
+                st.write(f"Límites: [{limite_inferior:.2f}, {limite_superior:.2f}]")
 
-        with c2:
-            st.metric("Outliers detectados", len(outliers))
-            st.write(f"Límites: [{limite_inferior:.2f}, {limite_superior:.2f}]")
-
-        with c3:
-            st.metric("Normalidad (p-value)", f"{p_valor:.4f}")
-            if p_valor > 0.05:
-                st.success("Parece Normal")
-            else:
-                st.warning("No es Normal")
+            with c3:
+                st.metric("Normalidad (p-value)", f"{p_valor:.4f}")
+                if p_valor > 0.05:
+                    st.success("Parece Normal")
+                else:
+                    st.warning("No es Normal")
+        else:
+            st.warning("No hay suficientes datos para el test de Shapiro-Wilk.")
     else:
         st.warning("El archivo no contiene columnas numéricas.")
         
