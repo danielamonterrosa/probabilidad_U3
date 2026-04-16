@@ -34,6 +34,7 @@ if opcion_datos == "Subir archivo CSV":
         try:
             # Intentamos leer el CSV
             df = pd.read_csv(uploaded_file)
+            st.toast("¡Archivo cargado con éxito!", icon="✅")
         except Exception as e:
             st.error(f"Error al cargar el archivo: {e}")
 
