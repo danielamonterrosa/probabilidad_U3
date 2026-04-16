@@ -5,6 +5,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy.stats import shapiro, skew
 from scipy.stats import norm
+import google.generativeai as genai
 
 # Configuración de la página
 st.set_page_config(page_title="Data Analyzer Pro", layout="wide")
@@ -226,3 +227,72 @@ if df is not None:
             ax.legend(fontsize='small')
             ax.set_title("Distribución Normal Estándar")
             st.pyplot(fig)
+
+
+# Configuración de la API (usa secrets de Streamlit)
+
+try:
+    # 1. Verificamos si la clave existe en los secretos
+    if "GEMINI_API_KEY" in st.secrets:
+        api_key = st.secrets["GEMINI_API_KEY"]
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('models/gemini-2.5-flash')
+    else:
+        st.sidebar.error("❌ No se encontró GEMINI_API_KEY en secrets.toml")
+except Exception as e:
+    st.error(f"Error detallado: {e}")
+
+# --- MÓDULO DE ASISTENTE DE IA ---
+if df is not None:
+    st.divider()
+    st.header("🤖 Asistente de IA: Interpretación Experta")
+
+    # Botón para consultar a la IA
+    if st.button("Consultar a Gemini sobre esta prueba"):
+        # Construcción del Prompt con los datos calculados previamente
+        prompt = f"""
+        Actúa como un profesor de estadística. Se realizó una prueba Z con estos parámetros:
+        - Variable analizada: {col_z}
+        - Media muestral: {media_muestral:.4f}
+        - Media hipotética (H0): {mu_0}
+        - Tamaño de muestra (n): {n}
+        - Sigma (poblacional): {sigma}
+        - Alpha (α): {alfa}
+        - Tipo de prueba: {tipo_prueba}
+        - Estadístico Z calculado: {z_stat:.4f}
+        - P-value: {p_valor:.4f}
+        - Decisión automática: {"Rechazar H0" if rechazar else "No rechazar H0"}
+
+        Explica de forma clara y académica:
+        1. ¿Por qué se tomó esa decisión basada en el p-value y alpha?
+        2. ¿Es razonable usar una prueba Z con estos datos (considera n y sigma)?
+        3. ¿Qué implicaciones tiene este resultado para el proyecto?
+        Sé conciso pero riguroso.
+        """
+
+        with st.spinner("Gemini está analizando los resultados..."):
+            try:
+                response = model.generate_content(prompt)
+                st.session_state['ia_response'] = response.text
+            except Exception as e:
+                st.error(f"Error al conectar con la IA: {e}")
+
+    # Mostrar respuesta de la IA si existe en el estado de la sesión
+    if 'ia_response' in st.session_state:
+        st.markdown("### 📝 Análisis de la IA")
+        st.info(st.session_state['ia_response'])
+
+        # --- COMPARACIÓN CON EL ESTUDIANTE ---
+        st.subheader("🧐 Tu turno de decidir")
+        decision_estudiante = st.radio(
+            "Basado en los datos, ¿cuál es tu conclusión?",
+            ["Selecciona una opción", "Rechazar H0", "No rechazar H0"],
+            horizontal=True
+        )
+
+        if decision_estudiante != "Selecciona una opción":
+            decision_correcta = "Rechazar H0" if rechazar else "No rechazar H0"
+            if decision_estudiante == decision_correcta:
+                st.success("¡Correcto! Tu análisis coincide con la lógica estadística.")
+            else:
+                st.error(f"Parece que hay un error. La lógica estadística indica: {decision_correcta}. ¡Revisa el p-value!")
