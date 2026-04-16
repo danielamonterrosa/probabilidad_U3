@@ -159,6 +159,19 @@ if df is not None:
         with st.expander("Configuración de la Prueba Z", expanded=True):
             col_z = st.selectbox("Variable para la prueba:", cols_numericas, key="z_var")
             
+            # Guardamos la variable inicial en la sesión si no existe
+            if 'last_col_z' not in st.session_state:
+                st.session_state['last_col_z'] = col_z
+
+            # Si la variable actual es distinta a la que teníamos guardada...
+            if st.session_state['last_col_z'] != col_z:
+                # Borramos la respuesta de la IA
+                if 'ia_response' in st.session_state:
+                    del st.session_state['ia_response']
+                # Actualizamos nuestra memoria a la nueva variable
+                st.session_state['last_col_z'] = col_z
+            # ------------------------------------------------------
+
             # Limpieza de datos inmediata
             datos_z = df[col_z].dropna()
             n = len(datos_z)
