@@ -161,6 +161,9 @@ if df is not None:
             # Limpieza de datos inmediata
             datos_z = df[col_z].dropna()
             n = len(datos_z)
+            if n == 0:
+                st.error("La variable seleccionada no tiene datos válidos.")
+                st.stop() # Detiene la ejecución del resto del script
             media_muestral = datos_z.mean()
 
             c1, c2, c3 = st.columns(3)
