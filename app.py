@@ -282,7 +282,7 @@ if df is not None:
         - P-value: {p_valor:.4f}
         - Decisión automática: {"Rechazar H0" if rechazar else "No rechazar H0"}
 
-        Explica de forma clara y académica:
+        Explica de forma clara, breve y académica:
         1. ¿Por qué se tomó esa decisión basada en el p-value y alpha?
         2. ¿Es razonable usar una prueba Z con estos datos (considera n y sigma)?
         3. ¿Qué implicaciones tiene este resultado para el proyecto?
